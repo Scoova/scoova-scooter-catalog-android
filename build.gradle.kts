@@ -12,7 +12,7 @@ plugins {
 }
 
 group = "info.scoo-va"
-version = "1.0.1"
+version = "1.0.2"
 
 repositories {
     // mavenLocal() first so the locally-staged Scoova SDKs (e.g.

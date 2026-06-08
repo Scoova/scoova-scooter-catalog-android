@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2 — 2026-06-08
+
+- Bump scoova-range-android dep from 1.0.0 → 1.0.1 to match Range's actual published version. v1.0.1 release workflow failed at compile because Range 1.0.0 was never uploaded to Central.
+
+
 ## 1.0.1 — 2026-06-08
 
 - Fix Gradle publishing layout: unwrap `afterEvaluate` so `signing { sign(publishing.publications["release"]) }` evaluates after the publication is registered. v1.0.0 release workflow failed at `Publication with name 'release' not found.` — never reached Sonatype, so no Central conflict on re-publish.
