@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3 — 2026-06-08
+
+- Add GitHub Packages as a Maven repo for resolving `scoova-range-android` during build. Central has a 15-30 min auto-promotion lag after the upload step accepts; GitHub Packages serves the artifact immediately, so catalog can resolve range without waiting.
+
+
 ## 1.0.2 — 2026-06-08
 
 - Bump scoova-range-android dep from 1.0.0 → 1.0.1 to match Range's actual published version. v1.0.1 release workflow failed at compile because Range 1.0.0 was never uploaded to Central.

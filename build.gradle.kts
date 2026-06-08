@@ -12,7 +12,7 @@ plugins {
 }
 
 group = "info.scoo-va"
-version = "1.0.2"
+version = "1.0.3"
 
 repositories {
     // mavenLocal() first so the locally-staged Scoova SDKs (e.g.
@@ -20,6 +20,22 @@ repositories {
     // versions ship.
     mavenLocal()
     mavenCentral()
+    // GitHub Packages — covers Maven Central's 15-30 min auto-promotion
+    // lag. When Range publishes its release.yml fires both the Central
+    // upload AND a GitHub Packages publish; the latter is queryable
+    // instantly, so catalog can resolve range immediately after Range's
+    // tag-push, without waiting for Central to sync. CI runs already have
+    // GITHUB_ACTOR + GITHUB_TOKEN in env (the workflow injects them); the
+    // empty fallback is for local builds where this repo's reads aren't
+    // needed (mavenLocal serves them).
+    maven {
+        name = "GitHubPackagesScoovaRange"
+        url = uri("https://maven.pkg.github.com/Scoova/scoova-range-android")
+        credentials {
+            username = System.getenv("GITHUB_ACTOR") ?: project.findProperty("gpr.user") as? String ?: ""
+            password = System.getenv("GITHUB_TOKEN") ?: project.findProperty("gpr.key") as? String ?: ""
+        }
+    }
 }
 
 dependencies {

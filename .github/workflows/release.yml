@@ -41,6 +41,15 @@ jobs:
         env:
           SIGNING_KEY:       ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD:  ${{ secrets.SIGNING_PASSWORD }}
+          # GitHub Packages credentials — scoova-scooter-catalog-android
+          # depends on `info.scoo-va:scoova-range-android`. Maven Central
+          # has a ~15-30 min sync lag after the upload step accepts; in
+          # that window, Gradle can't resolve range from Central. Range's
+          # GitHub Packages publish lands immediately so we route reads
+          # through there as a faster fallback, declared in
+          # build.gradle.kts. Authenticated reads require these tokens.
+          GITHUB_ACTOR:  ${{ github.actor }}
+          GITHUB_TOKEN:  ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew publishReleasePublicationToLocalStagingRepository --no-daemon
 
       - name: Upload to Sonatype Central Portal
