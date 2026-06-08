@@ -1,0 +1,65 @@
+name: Release — Publish to Maven Central
+
+# Triggered by pushing a versioned tag, e.g. `git tag v1.1.2 && git push --tags`.
+#
+# Required repository (or org-level) secrets:
+#   OSSRH_USERNAME   — Sonatype Central Portal username (legacy JIRA account)
+#   OSSRH_PASSWORD   — Sonatype Central Portal password / user-token
+#   SIGNING_KEY      — ASCII-armored PGP secret key (output of
+#                      `gpg --export-secret-keys --armor <KEY_ID>`)
+# Optional:
+#   SIGNING_PASSWORD — passphrase for the PGP key (omit if passphrase-less)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    name: Publish info.scoo-va artifact to Maven Central
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # for `gh release create`
+      packages: write   # for GitHub Packages publish
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: 17
+          cache: gradle
+
+      - name: Bootstrap gradle wrapper
+        run: |
+          if [ ! -x "./gradlew" ]; then
+            gradle wrapper --gradle-version 8.10.2
+          fi
+
+      - name: Stage release artifact (signed)
+        env:
+          SIGNING_KEY:       ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD:  ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew publishReleasePublicationToLocalStagingRepository --no-daemon
+
+      - name: Upload to Sonatype Central Portal
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+        run: ./scripts/publish-to-central-portal.sh
+
+      - name: Publish to GitHub Packages
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew publishReleasePublicationToGitHubPackagesRepository --no-daemon
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes "Published \`${{ github.ref_name }}\` to Maven Central via Sonatype Central Portal." \
+            --verify-tag
