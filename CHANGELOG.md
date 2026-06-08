@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 — 2026-06-08
+
+- Fix Gradle publishing layout: unwrap `afterEvaluate` so `signing { sign(publishing.publications["release"]) }` evaluates after the publication is registered. v1.0.0 release workflow failed at `Publication with name 'release' not found.` — never reached Sonatype, so no Central conflict on re-publish.
+
+
 ## 1.0.0 — 2026-06-08
 
 - Initial public release of the Scoova Scooter Catalog for Android / JVM.
