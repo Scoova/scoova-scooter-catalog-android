@@ -25,7 +25,7 @@ repositories {
 dependencies {
     // Reads `RangePredictor.ScooterSpecs` to expose a typed lookup that
     // feeds the range engine directly — no per-app marshalling.
-    api("info.scoo-va:scoova-range-android:1.0.0")
+    api("info.scoo-va:scoova-range-android:1.0.1")
     testImplementation(kotlin("test"))
 }
 
