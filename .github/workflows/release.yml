@@ -1,23 +1,23 @@
-name: Release — Publish to GitHub Packages (internal)
+name: Release — Publish to Maven Central + GitHub Packages
 
-# Internal-only publish — repo is private, artifact lands on GitHub
-# Packages where consumers authenticate with a PAT (read:packages).
+# Catalog SDK publishes to PUBLIC Maven Central as v2.0.0 to replace
+# the leaky v1.0.x artifacts (which bundled proprietary catalog data).
+# The 2.0 release strips every model row + spec value; the data is
+# fetched at runtime from the rider-platform server. Pushing 2.0 to
+# Central means clients on `latest-version` automatically upgrade off
+# the leaky 1.0.x versions.
 #
-# Sonatype Central publish step was removed on 2026-06-08 — the
-# scooter-catalog SDK exposed proprietary vehicle taxonomy publicly;
-# range + analysis stayed private for symmetry. The historical 1.0.x
-# Central artifacts (info.scoo-va:scoova-scooter-catalog-android:1.0.1) are
-# immutable on the mirror network, but no new versions go to Central.
+# Sister SDKs (scoova-range-android, scoova-analysis-android) stay
+# GitHub-Packages-only (private repos, auth-gated).
 #
-# Required secrets:
-#   SIGNING_KEY      — ASCII-armored PGP key. GitHub Packages doesn't
-#                      validate the signatures itself, but the signing
-#                      step still runs so artifacts ship with .asc
-#                      files. Lets us flip back to Central with a
-#                      one-line workflow edit if the proprietary-data
-#                      concern is ever resolved.
+# Required repository (or org-level) secrets:
+#   OSSRH_USERNAME   — Sonatype Central Portal token username
+#   OSSRH_PASSWORD   — Sonatype Central Portal token password (RAW, NOT
+#                      the base64-encoded form — the script does the
+#                      base64 step itself)
+#   SIGNING_KEY      — ASCII-armored PGP secret key
 # Optional:
-#   SIGNING_PASSWORD — passphrase for the PGP key (omit if passphrase-less).
+#   SIGNING_PASSWORD — passphrase for the PGP key (omit if passphrase-less)
 
 on:
   push:
@@ -26,7 +26,7 @@ on:
 
 jobs:
   publish:
-    name: Publish info.scoo-va artifact to GitHub Packages
+    name: Publish info.scoo-va artifact to Maven Central + GitHub Packages
     runs-on: ubuntu-latest
     permissions:
       contents: write   # for `gh release create`
@@ -50,7 +50,15 @@ jobs:
         env:
           SIGNING_KEY:       ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD:  ${{ secrets.SIGNING_PASSWORD }}
+          GITHUB_ACTOR:      ${{ github.actor }}
+          GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew publishReleasePublicationToLocalStagingRepository --no-daemon
+
+      - name: Upload to Sonatype Central Portal
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+        run: ./scripts/publish-to-central-portal.sh
 
       - name: Publish to GitHub Packages
         env:
@@ -64,5 +72,5 @@ jobs:
         run: |
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
-            --notes "Published \`${{ github.ref_name }}\` to GitHub Packages (internal). Pull with a PAT scoped \`read:packages\` against \`maven.pkg.github.com/Scoova/scoova-scooter-catalog-android\`." \
+            --notes "Published \`${{ github.ref_name }}\` to Maven Central + GitHub Packages." \
             --verify-tag

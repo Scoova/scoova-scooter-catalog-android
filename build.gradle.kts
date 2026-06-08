@@ -1,18 +1,24 @@
-// Pure-data Scoova vehicle taxonomy + per-model specifications. Works
-// in Android apps, KMP modules, or server-side Kotlin — no Android
-// dependencies. Same shape as `scoova-range-android` /
-// `scoova-analysis-android`.
+// Server-backed scooter catalog SDK. The catalog itself (models, specs,
+// BLE serial prefixes, feature flags) lives in Postgres on the Scoova
+// rider-platform; this SDK is just the wire-shape + an HTTP client that
+// fetches and caches the data at app launch.
+//
+// 2.0.0 — major rewrite. Pre-2.0 versions (1.0.x on Maven Central)
+// bundled the catalog as a hardcoded `scootersDataMap` literal that
+// exposed proprietary vehicle data to anyone who downloaded the
+// artifact. 2.0 removes every model row + every spec value from
+// source and routes them through `GET /api/v1/scooter-catalog`
+// (auth-gated by `X-API-Key`).
 plugins {
-    // Pinned to 2.0.21 — match the Scoova consumer app's Kotlin runtime so
-    // `.kotlin_module` metadata stays decodable by Compose-2.0 consumers.
     kotlin("jvm") version "2.0.21"
+    kotlin("plugin.serialization") version "2.0.21"
     `maven-publish`
     signing
     `java-library`
 }
 
 group = "info.scoo-va"
-version = "1.0.3"
+version = "2.0.0"
 
 repositories {
     // mavenLocal() first so the locally-staged Scoova SDKs (e.g.
@@ -42,6 +48,9 @@ dependencies {
     // Reads `RangePredictor.ScooterSpecs` to expose a typed lookup that
     // feeds the range engine directly — no per-app marshalling.
     api("info.scoo-va:scoova-range-android:1.0.1")
+    // Network + JSON for the catalog client.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     testImplementation(kotlin("test"))
 }
 
