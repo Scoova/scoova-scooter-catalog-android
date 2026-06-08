@@ -1,14 +1,23 @@
-name: Release — Publish to Maven Central
+name: Release — Publish to GitHub Packages (internal)
 
-# Triggered by pushing a versioned tag, e.g. `git tag v1.1.2 && git push --tags`.
+# Internal-only publish — repo is private, artifact lands on GitHub
+# Packages where consumers authenticate with a PAT (read:packages).
 #
-# Required repository (or org-level) secrets:
-#   OSSRH_USERNAME   — Sonatype Central Portal username (legacy JIRA account)
-#   OSSRH_PASSWORD   — Sonatype Central Portal password / user-token
-#   SIGNING_KEY      — ASCII-armored PGP secret key (output of
-#                      `gpg --export-secret-keys --armor <KEY_ID>`)
+# Sonatype Central publish step was removed on 2026-06-08 — the
+# scooter-catalog SDK exposed proprietary vehicle taxonomy publicly;
+# range + analysis stayed private for symmetry. The historical 1.0.x
+# Central artifacts (info.scoo-va:scoova-scooter-catalog-android:1.0.1) are
+# immutable on the mirror network, but no new versions go to Central.
+#
+# Required secrets:
+#   SIGNING_KEY      — ASCII-armored PGP key. GitHub Packages doesn't
+#                      validate the signatures itself, but the signing
+#                      step still runs so artifacts ship with .asc
+#                      files. Lets us flip back to Central with a
+#                      one-line workflow edit if the proprietary-data
+#                      concern is ever resolved.
 # Optional:
-#   SIGNING_PASSWORD — passphrase for the PGP key (omit if passphrase-less)
+#   SIGNING_PASSWORD — passphrase for the PGP key (omit if passphrase-less).
 
 on:
   push:
@@ -17,7 +26,7 @@ on:
 
 jobs:
   publish:
-    name: Publish info.scoo-va artifact to Maven Central
+    name: Publish info.scoo-va artifact to GitHub Packages
     runs-on: ubuntu-latest
     permissions:
       contents: write   # for `gh release create`
@@ -41,22 +50,7 @@ jobs:
         env:
           SIGNING_KEY:       ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD:  ${{ secrets.SIGNING_PASSWORD }}
-          # GitHub Packages credentials — scoova-scooter-catalog-android
-          # depends on `info.scoo-va:scoova-range-android`. Maven Central
-          # has a ~15-30 min sync lag after the upload step accepts; in
-          # that window, Gradle can't resolve range from Central. Range's
-          # GitHub Packages publish lands immediately so we route reads
-          # through there as a faster fallback, declared in
-          # build.gradle.kts. Authenticated reads require these tokens.
-          GITHUB_ACTOR:  ${{ github.actor }}
-          GITHUB_TOKEN:  ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew publishReleasePublicationToLocalStagingRepository --no-daemon
-
-      - name: Upload to Sonatype Central Portal
-        env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-        run: ./scripts/publish-to-central-portal.sh
 
       - name: Publish to GitHub Packages
         env:
@@ -70,5 +64,5 @@ jobs:
         run: |
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
-            --notes "Published \`${{ github.ref_name }}\` to Maven Central via Sonatype Central Portal." \
+            --notes "Published \`${{ github.ref_name }}\` to GitHub Packages (internal). Pull with a PAT scoped \`read:packages\` against \`maven.pkg.github.com/Scoova/scoova-scooter-catalog-android\`." \
             --verify-tag
